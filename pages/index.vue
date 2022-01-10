@@ -35,9 +35,23 @@
                 </div>
 
                 <div
-                  class="relative flex items-center justify-center h-screen xl:max-w-lg bg-white overflow-y-auto"
+                  class="relative flex items-start pt-10 justify-center h-screen xl:w-[600px] bg-white overflow-y-auto"
                 >
                   <div>
+                    <div class="flex items-center justify-around px-10 pb-10">
+                      <button
+                        v-on:click="clearEverything()"
+                        class="inline-flex items-center self-end px-4 py-2 text-sm font-medium text-white border-transparent rounded-md shadow-sm bg-brand-blue border hover:bg-brand-blue-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-blue"
+                      >
+                        Clear everything
+                      </button>
+                      <button
+                        v-on:click="removeLastStroke()"
+                        class="inline-flex items-center self-end px-4 py-2 text-sm font-medium text-white border-transparent rounded-md shadow-sm bg-brand-blue border hover:bg-brand-blue-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-blue"
+                      >
+                        Remove last stroke
+                      </button>
+                    </div>
                     <div class="flex items-center justify-between px-10">
                       <div class="flex items-center space-x-2">
                         <svg
@@ -62,7 +76,7 @@
                       <div>
                         <div class="flow-root">
                           <div
-                            class="flex flex-col items-start space-y-4 border border-gray-800 rounded-md p-5"
+                            class="flex flex-col items-start space-y-4 border border-gray-800 rounded-md p-5 w-[400px]"
                           >
                             <div
                               class="flex items-start justify-between flex-shrink-0 w-full"
@@ -77,8 +91,9 @@
                                   rows="3"
                                   name="comment"
                                   id="comment"
-                                  class="w-full resize-none focus:ring-0 sm:text-sm appearance-none border-0"
+                                  class="w-full resize-none focus:ring-0 sm:text-sm appearance-none w-[220px] h-[90px]"
                                   placeholder="Add your comment..."
+                                  v-model="comment"
                                 ></textarea>
                               </div>
 
@@ -187,6 +202,7 @@
 
                                     <button
                                       class="inline-flex items-center self-end px-4 py-2 text-sm font-medium text-white border-transparent rounded-md shadow-sm bg-brand-blue border hover:bg-brand-blue-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-blue"
+                                      v-on:click.prevent="postComment()"
                                     >
                                       Post
                                     </button>
@@ -199,10 +215,12 @@
                           <div class="flex flex-col">
                             <div
                               class="overflow-y-auto divide-y divide-gray-700"
+                              v-for="(item, index) in comments"
+                              v-bind:key="index"
                             >
                               <div class="py-5 flex">
                                 <img
-                                  src="https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-=eyJhcHBfaWQiOjEyMDd9&amp;auto=format&amp;fit=facearea&amp;facepad=8&amp;w=256&amp;h=256&amp;q=80"
+                                  src="https://images.unsplash.com/photo-1550525811-e5869dd03032?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
                                   alt="Emily Selman."
                                   class="w-12 h-12 rounded-full flex-shrink-0"
                                 />
@@ -216,13 +234,10 @@
                                   <div
                                     class="flex items-center space-x-2 text-base text-gray-500 text-left"
                                   >
-                                    <p class="w-full">
-                                      This is the bag of my dreams. I took it on
-                                      my last vacation and was able to fit an
-                                      absurd amount of snacks for the many long
-                                      and hungry flights.
+                                    <p class="w-full break-all">
+                                      {{ item }}
                                     </p>
-                                    <button class="px-5 text-gray-400">
+                                    <button class="px-5 text-gray-400 hidden">
                                       <svg
                                         xmlns="http://www.w3.org/2000/svg"
                                         class="w-6 h-6"
@@ -242,7 +257,7 @@
                                 </div>
                               </div>
                             </div>
-                            <div>
+                            <div class="hidden">
                               <button
                                 class="flex items-center mt-2 space-x-1 text-sm text-gray-400"
                               >
@@ -326,15 +341,51 @@
 export default {
   data() {
     return {
+      canvas: null,
       ctx: null,
       isMouseDown: false,
       isColorPaneVisible: false,
       color: "#DC2626",
       colors: ["#DC2626", "#16A34A", "#CA8A04", "#2563EB", "#4F46E5"],
       segments: [],
+      comments: [],
+      comment: "",
     };
   },
   methods: {
+    clearEverything: function () {
+      this.segments = [];
+      this.redraw();
+    },
+    removeLastStroke: function () {
+      this.segments.pop();
+      this.redraw();
+    },
+    redraw: function () {
+      let i, segment, points, j, pl;
+      const l = this.segments.length;
+      this.ctx.lineCap = "round";
+      this.ctx.lineJoin = "round";
+      this.ctx.lineWidth = 10;
+      this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (i = 0; i < l; i++) {
+        segment = this.segments[i];
+        points = segment.points;
+        this.ctx.strokeStyle = segment.color;
+        this.ctx.beginPath();
+        this.ctx.moveTo(points[0].x, points[0].y);
+        pl = points.length;
+        for (j = 0; j < pl; j++) {
+          this.ctx.lineTo(points[j].x, points[j].y);
+        }
+        this.ctx.stroke();
+        this.ctx.closePath();
+      }
+    },
+    postComment: function () {
+      this.comments.push(this.comment);
+      this.comment = "";
+    },
     toggleColorPane: function () {
       this.isColorPaneVisible = !this.isColorPaneVisible;
     },
@@ -347,8 +398,12 @@ export default {
         color: this.color,
         points: [
           {
-            x: event.offsetX,
-            y: event.offsetY,
+            x:
+              (event.offsetX * this.canvas.width) /
+              document.getElementById("background").offsetWidth,
+            y:
+              (event.offsetY * this.canvas.height) /
+              document.getElementById("background").offsetHeight,
           },
         ],
       });
@@ -357,8 +412,12 @@ export default {
     onCanvasMouseMove: function (event) {
       if (this.isMouseDown) {
         this.segments[this.segments.length - 1].points.push({
-          x: event.offsetX,
-          y: event.offsetY,
+          x:
+            (event.offsetX * this.canvas.width) /
+            document.getElementById("background").offsetWidth,
+          y:
+            (event.offsetY * this.canvas.height) /
+            document.getElementById("background").offsetHeight,
         });
         this.draw();
       }
@@ -371,7 +430,6 @@ export default {
     },
     draw: function () {
       var points = this.segments[this.segments.length - 1].points;
-      console.log(points);
       this.ctx.lineCap = "round";
       this.ctx.lineJoin = "round";
       this.ctx.lineWidth = 10;
@@ -384,12 +442,12 @@ export default {
     },
   },
   mounted() {
-    var canvas = document.getElementById("canvas");
-    this.ctx = canvas.getContext("2d");
+    this.canvas = document.getElementById("canvas");
+    this.ctx = this.canvas.getContext("2d");
     var background = document.getElementById("background");
-    background.onload = function () {
-      canvas.setAttribute("width", background.offsetWidth);
-      canvas.setAttribute("height", background.offsetHeight);
+    background.onload = () => {
+      this.canvas.setAttribute("width", background.offsetWidth);
+      this.canvas.setAttribute("height", background.offsetHeight);
     };
   },
 };
